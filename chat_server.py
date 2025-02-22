@@ -6,6 +6,8 @@ import websockets
 
 # 接続中のクライアントを保持するセット
 CONNECTIONS = set()
+# チャットルームの最大人数
+MAX_CONNECTIONS = 10
 
 
 async def broadcast(message: str, sender_id: str):
@@ -28,11 +30,23 @@ async def handle_connection(websocket):
     client_id = f"User-{hash(websocket)}"
 
     try:
+        # 接続数をチェック
+        if len(CONNECTIONS) >= MAX_CONNECTIONS:
+            # 制限に達している場合はエラーメッセージを送信して接続を閉じる
+            error_data = {
+                "type": "error",
+                "content": "チャットルームが満室です（最大10人）",
+                "timestamp": datetime.now().strftime("%H:%M:%S"),
+            }
+            await websocket.send(json.dumps(error_data))
+            await websocket.close()
+            return
+
         # 新しい接続を登録
         CONNECTIONS.add(websocket)
 
         # 接続通知をブロードキャスト
-        await broadcast(f"{client_id} が入室しました", "System")
+        await broadcast(f"{client_id} が入室しました（現在の参加者: {len(CONNECTIONS)}人）", "System")
 
         # クライアントからのメッセージを処理
         async for message in websocket:
@@ -42,8 +56,9 @@ async def handle_connection(websocket):
         print(f"Client {client_id} disconnected")
     finally:
         # 接続が切れた場合、セットから削除
-        CONNECTIONS.remove(websocket)
-        await broadcast(f"{client_id} が退室しました", "System")
+        if websocket in CONNECTIONS:
+            CONNECTIONS.remove(websocket)
+            await broadcast(f"{client_id} が退室しました（現在の参加者: {len(CONNECTIONS)}人）", "System")
 
 
 async def shutdown(server):

@@ -16,6 +16,10 @@ async def receive_messages(websocket, stop):
                     print(
                         f"\n[{data['timestamp']}] {data['sender']}: {data['content']}"
                     )
+                elif data["type"] == "error":
+                    print(f"\n[{data['timestamp']}] エラー: {data['content']}")
+                    if not stop.done():
+                        stop.set_result(None)
             except asyncio.TimeoutError:
                 continue
     except websockets.exceptions.ConnectionClosed:
