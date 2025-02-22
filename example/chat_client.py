@@ -1,61 +1,77 @@
 import asyncio
 import json
+import signal
 import sys
 import websockets
 import aioconsole
 
-async def receive_messages(websocket, running):
+async def receive_messages(websocket, stop):
     """サーバーからのメッセージを受信して表示"""
     try:
-        while running.is_set():
+        while not stop.done():
             try:
                 message = await asyncio.wait_for(websocket.recv(), timeout=1.0)
                 data = json.loads(message)
                 if data["type"] == "message":
                     print(f"\n[{data['timestamp']}] {data['sender']}: {data['content']}")
-                    print("メッセージを入力 (終了するには 'quit' と入力): ", end="", flush=True)
             except asyncio.TimeoutError:
                 continue
     except websockets.exceptions.ConnectionClosed:
         print("\nサーバーとの接続が切断されました")
-        running.clear()
+        if not stop.done():
+            stop.set_result(None)
 
-async def send_messages(websocket, running):
+async def send_messages(websocket, stop):
     """ユーザー入力を受け付けてサーバーに送信"""
     try:
-        while running.is_set():
-            message = await aioconsole.ainput("メッセージを入力 (終了するには 'quit' と入力): ")
-            if message.lower() == "quit":
-                running.clear()
+        while not stop.done():
+            try:
+                message = await aioconsole.ainput("メッセージを入力 (終了するには 'quit' と入力): ")
+                if message.lower() == "quit":
+                    stop.set_result(None)
+                    break
+                if not stop.done():
+                    await websocket.send(message)
+            except asyncio.CancelledError:
                 break
-            if running.is_set():
-                await websocket.send(message)
     except websockets.exceptions.ConnectionClosed:
-        running.clear()
+        if not stop.done():
+            stop.set_result(None)
 
 async def main():
     """WebSocketクライアントを起動"""
     try:
+        # 終了制御用のFuture
+        stop = asyncio.Future()
+
+        # シグナルハンドラを設定
+        loop = asyncio.get_running_loop()
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            loop.add_signal_handler(sig, lambda: stop.set_result(None) if not stop.done() else None)
+
         async with websockets.connect("ws://localhost:8765") as websocket:
             print("チャットに接続しました")
             
-            # 実行状態を管理するフラグ
-            running = asyncio.Event()
-            running.set()
-            
-            # メッセージの送受信を並行して実行
-            await asyncio.gather(
-                receive_messages(websocket, running),
-                send_messages(websocket, running)
+            # メッセージの送受信タスクを作成
+            tasks = asyncio.gather(
+                receive_messages(websocket, stop),
+                send_messages(websocket, stop)
             )
             
-            print("チャットを終了します")
-            sys.exit(0)
+            # いずれかのタスクが終了するまで待機
+            try:
+                await stop
+                print("\nシャットダウンを開始します...")
+                tasks.cancel()
+                try:
+                    await tasks
+                except asyncio.CancelledError:
+                    pass
+            finally:
+                print("チャットを終了します")
             
     except ConnectionRefusedError:
         print("サーバーに接続できません。サーバーが起動しているか確認してください。")
-    except KeyboardInterrupt:
-        print("\nクライアントを終了します")
 
 if __name__ == "__main__":
     asyncio.run(main()) 
