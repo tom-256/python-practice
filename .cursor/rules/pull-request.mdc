@@ -14,13 +14,13 @@ globs:
 - PR タイトルおよび PR テンプレートはマージ先との差分をもとに適切な内容にする
 - 指示がない限り Draft で pull request を作成
 - PR の本文は一時ファイルを使用して作成することを推奨
-- 一時ファイルは作成後削除する
 
   ```bash
   # PR本文を一時ファイルに保存
   cat > pr_body.txt << 'EOL'
   {{PRテンプレートの内容}}
   EOL
+  rm pr_body.txt
 
   # PRの作成
   git push origin HEAD && \
