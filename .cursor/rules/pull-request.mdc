@@ -1,5 +1,5 @@
 ---
-description: for pull request
+description: for pull requestpl
 globs: 
 ---
 ## pull request作成手順
@@ -13,7 +13,7 @@ globs:
 - 以下のコマンドで pull request を作成し、自動的にブラウザで開く
 - PR タイトルおよび PR テンプレートはマージ先との差分をもとに適切な内容にする
 - 指示がない限り Draft で pull request を作成
-- PR の本文は一時ファイルを使用して作成し、作成後は削除すること
+- PR の本文は一時ファイルを使用して作成することを推奨
 - 各セクションを明確に区分
 - 必要な情報を漏れなく記載
 
@@ -25,8 +25,8 @@ globs:
   cat > pr_body.txt << 'EOL'
   {{PRテンプレートの内容}}
   EOL
-
   rm pr_body.txt
+
   # PRの作成
   git push origin HEAD && \
   gh pr create --draft --title "{{PRタイトル}}" --body-file pr_body.txt && \
