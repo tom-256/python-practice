@@ -1,5 +1,5 @@
 ---
-description: for pull request
+description: for pull requestpl
 globs: 
 ---
 ## pull request作成手順
@@ -20,8 +20,8 @@ globs:
   cat > pr_body.txt << 'EOL'
   {{PRテンプレートの内容}}
   EOL
-  rm pr_body.txt
 
+  rm pr_body.txt
   # PRの作成
   git push origin HEAD && \
   gh pr create --draft --title "{{PRタイトル}}" --body-file pr_body.txt && \
