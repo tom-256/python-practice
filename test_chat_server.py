@@ -77,3 +77,38 @@ async def test_multiple_clients(websocket_server):
     # クリーンアップ
     for client in clients:
         await client.close()
+
+
+@pytest.mark.asyncio(loop_scope="function")
+async def test_max_connections(websocket_server):
+    """最大接続数のテスト"""
+    # 最大接続数まで接続を作成
+    clients = []
+    for _ in range(10):
+        client = await websockets.connect("ws://localhost:8765")
+        # 入室メッセージを受信
+        received = await client.recv()
+        message_data = json.loads(received)
+        assert message_data["type"] == "message"
+        assert "入室しました" in message_data["content"]
+        clients.append(client)
+
+    # 11人目の接続を試みる
+    excess_client = await websockets.connect("ws://localhost:8765")
+    # エラーメッセージを受信
+    received = await excess_client.recv()
+    message_data = json.loads(received)
+    assert message_data["type"] == "error"
+    assert "満室です" in message_data["content"]
+
+    # 接続が自動的に閉じられることを確認
+    try:
+        await excess_client.recv()
+        assert False, "Connection should be closed"
+    except websockets.exceptions.ConnectionClosed:
+        pass
+
+    # クリーンアップ
+    await excess_client.close()
+    for client in clients:
+        await client.close()
