@@ -46,7 +46,10 @@ async def handle_connection(websocket):
         CONNECTIONS.add(websocket)
 
         # 接続通知をブロードキャスト
-        await broadcast(f"{client_id} が入室しました（現在の参加者: {len(CONNECTIONS)}人）", "System")
+        await broadcast(
+            f"{client_id} が入室しました（現在の参加者: {len(CONNECTIONS)}人）",
+            "System",
+        )
 
         # クライアントからのメッセージを処理
         async for message in websocket:
@@ -58,7 +61,10 @@ async def handle_connection(websocket):
         # 接続が切れた場合、セットから削除
         if websocket in CONNECTIONS:
             CONNECTIONS.remove(websocket)
-            await broadcast(f"{client_id} が退室しました（現在の参加者: {len(CONNECTIONS)}人）", "System")
+            await broadcast(
+                f"{client_id} が退室しました（現在の参加者: {len(CONNECTIONS)}人）",
+                "System",
+            )
 
 
 async def shutdown(server):
